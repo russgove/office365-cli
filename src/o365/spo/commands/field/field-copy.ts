@@ -6,6 +6,9 @@ import {
 import SpoCommand from '../../../base/SpoCommand';
 import { ContextInfo } from '../../spo';
 import GlobalOptions from '../../../../GlobalOptions';
+import transformers from '../../fieldTransformers/fieldTransformers';
+import { IFieldTransformer } from '../../fieldTransformers/IFieldTransformer';
+
 //import { number } from 'easy-table';
 //import { ExceptionData } from 'applicationinsights/out/Declarations/Contracts';
 
@@ -15,13 +18,16 @@ const vorpal: Vorpal = require('../../../../vorpal-init');
 interface CommandArgs {
   options: Options;
 }
-
+interface IFieldDefinition {
+  InternalName: string;
+  TypeAsString: string;
+}
 interface Options extends GlobalOptions {
   webUrl: string;
   listTitle: string;
   fromField: string;
   toField: string;
-  setMissingValuesToBlank?: string;
+  transformer: string;
   batchSize?: number;
   //fromList (copy based on lookup field)
   //filter (filter which items should be copied)
@@ -38,47 +44,78 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   public async commandAction(cmd: CommandInstance, args: CommandArgs, cb: () => void): Promise<void> {
 
+
     let contextInfo: ContextInfo = await this.getRequestDigest(args.options.webUrl);
     // get the field defs
 
-    let toFieldDef: any = await this.fetchFieldDefinition(args.options.webUrl, args.options.listTitle, args.options.toField, contextInfo, cmd, cb);
-    if (!toFieldDef) { throw new Error("error fetching to field definition."); }
-    let fromFieldDef: any = await this.fetchFieldDefinition(args.options.webUrl, args.options.listTitle, args.options.fromField, contextInfo, cmd, cb);
+    let fromFieldDef: IFieldDefinition = await this.fetchFieldDefinition(args.options.webUrl, args.options.listTitle, args.options.fromField, contextInfo, cmd, cb);
     if (!fromFieldDef) { throw new Error("error fetching from field definition."); }
-
-    let lastId: number = 0;
-    while (true) {
-      let results = await this.getABatch(args, lastId, contextInfo, fromFieldDef.value[0], toFieldDef.value[0])
-        .catch((err) => {
-          cmd.log(vorpal.chalk.green('Error fetching batch'));
-          this.handleRejectedODataJsonPromise(err, cmd, cb);
-
-        });
-      console.log(`@line 90 results.value is ${results.value}`)
-      if (results.value.length === 0) break;
-      if (args.options.batchSize && args.options.batchSize > 0) {
-        await this.updateBatch(args, contextInfo.FormDigestValue, results.value, fromFieldDef.value[0], toFieldDef.value[0])
-          .catch((err) => {
-            cmd.log(vorpal.chalk.green('Error updating bacth'));
-            this.handleRejectedODataJsonPromise(err, cmd, cb);
-
-          });
-      } else {
-        await this.updateNoBatch(args, contextInfo.FormDigestValue, results.value, fromFieldDef.value[0], toFieldDef.value[0])
-          .catch((err) => {
-            cmd.log(vorpal.chalk.red('Error updating item'));
-            this.handleRejectedODataJsonPromise(err, cmd, cb);
-
-          });
+    let toFieldDef: IFieldDefinition = await this.fetchFieldDefinition(args.options.webUrl, args.options.listTitle, args.options.toField, contextInfo, cmd, cb);
+    if (!toFieldDef) { throw new Error("error fetching to field definition."); }
+    
+    let transformerToUse: IFieldTransformer | null = null;
+    for (var transformer of transformers) {
+      if (transformer.fromFieldType === fromFieldDef.TypeAsString
+        && transformer.toFieldType === toFieldDef.TypeAsString
+        && transformer.name === args.options.transformer) {
+        transformerToUse = transformer.transformer;
+        break;
       }
-
-      lastId = results.value[results.value.length - 1].Id;
     }
+    if (!transformerToUse) {
+      cmd.log(`No transformer named ${args.options.transformer} for convertiing from ${fromFieldDef.TypeAsString} to 
+       ${toFieldDef.TypeAsString} could be found. Valid transformers follow:`)
+      for (var transformer of transformers) {
+        if (transformer.fromFieldType === fromFieldDef.TypeAsString
+          && transformer.toFieldType === toFieldDef.TypeAsString
+        ) {
+          cmd.log(`${transformer.name}  (${transformer.description})`);
+
+        }
+        cb();
+      }
+    } else {
+      var sande = transformerToUse.setQuery(args.options.fromField);
+      var selects = sande.selects;
+      var expands = sande.expands;
+      var fetchQuery: string = this.createFetchQuery(args, selects, expands);
+      let lastId: number = 0;
+      while (true) {
+        let results = await this.getABatch(fetchQuery, lastId, contextInfo)
+          .catch((err) => {
+            cmd.log(vorpal.chalk.green('Error fetching batch'));
+            this.handleRejectedODataJsonPromise(err, cmd, cb);
+
+          });
+        console.log(`@line 90 results.value is ${results.value}`)
+        if (results.value.length === 0) break;
+        if (args.options.batchSize && args.options.batchSize > 0) {
+          await this.updateBatch(args, contextInfo.FormDigestValue, results.value, transformerToUse, fromFieldDef, toFieldDef)
+            .catch((err) => {
+              cmd.log(vorpal.chalk.green('Error updating bacth'));
+              this.handleRejectedODataJsonPromise(err, cmd, cb);
+
+            });
+        } else {
+          await this.updateNoBatch(args, contextInfo.FormDigestValue, results.value, transformerToUse, fromFieldDef, toFieldDef)
+            .catch((err) => {
+              cmd.log(vorpal.chalk.red('Error updating item'));
+              this.handleRejectedODataJsonPromise(err, cmd, cb);
+
+            });
+        }
+
+        lastId = results.value[results.value.length - 1].Id;
+      }
+    }
+
+
+
     cmd.log(vorpal.chalk.green('DONE'));
     cb();
 
   }
-  private async fetchFieldDefinition(webUrl: string, listTitle: string, fieldInternalName: string, contextInfo: ContextInfo, cmd: CommandInstance, cb: () => void): Promise<any> {
+  private async fetchFieldDefinition(webUrl: string, listTitle: string, fieldInternalName: string, contextInfo: ContextInfo, cmd: CommandInstance, cb: () => void): Promise<IFieldDefinition> {
     const fieldDefinitionRequest: any = {
       url: `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/fields?$filter=InternalName eq '${fieldInternalName}'`,
       headers: {
@@ -87,25 +124,32 @@ class SpoFieldCopyCommand extends SpoCommand {
       },
       json: true
     };
-    let fromFieldDef: any = await request.get(fieldDefinitionRequest)
+    return request.get<{value:Array<IFieldDefinition>}>(fieldDefinitionRequest)
+      .then((results: {value:Array<IFieldDefinition>}) => {
+        console.log(results);
+        if (results.value.length !== 0) {
+          console.log(`${fieldInternalName} was found`);
+          return results.value[0];
+        }
+        else {
+          console.log(`query for field ${fieldInternalName} returned no results`);
+          throw new Error(`Field ${fieldInternalName} was not found`);
+        }
+      })
       .catch((err) => {
-        cmd.log(vorpal.chalk.green('Error fetching from field'));
-        this.handleRejectedODataJsonPromise(err, cmd, cb);
+        throw new Error(`Error fetching fiield definiton for  ${fieldInternalName}`);
       });
-    if (!fromFieldDef) {
-      throw new Error("error fetching from field definition.");
-    }
-    return fromFieldDef;
+
   }
 
-  private async updateNoBatch(args: any, formDigestValue: string, records: Array<any>, fromFieldDef: any, toFieldDef: any) {
+  private async updateNoBatch(args: any, formDigestValue: string, records: Array<any>, transformer: IFieldTransformer, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition) {
     const listTitle = args.options.listTitle;
     //const toField = args.options.toField;
     //const fromField = args.options.fromField;
 
     const webUrl = args.options.webUrl;
     for (var record of records) {
-      const body = await this.createUpdateJSON(args, toFieldDef, record, fromFieldDef, formDigestValue);
+      const body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
       //   console.log(body);
       const updateOptions: any = {
         url: `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`,
@@ -128,9 +172,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     }
 
   }
-
-
-  private async updateBatch(args: any, formDigestValue: string, records: Array<any>, fromFieldDef: any, toFieldDef: any) {
+  private async updateBatch(args: any, formDigestValue: string, records: Array<any>, transformer: IFieldTransformer, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition) {
     const listTitle = args.options.listTitle;
     // const toField = args.options.toField;
     // const fromField = args.options.fromField;
@@ -142,7 +184,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     batchContents.push('Content-Type: application/http');
     batchContents.push('Accept: application/json;odata=verbose');
     for (var record of records) {
-      const body = await this.createUpdateJSON(args, toFieldDef, record, fromFieldDef, formDigestValue);
+      const body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
       var endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
       batchContents.push('--changeset_' + changeSetId);
       batchContents.push('Content-Type: application/http');
@@ -180,7 +222,6 @@ class SpoFieldCopyCommand extends SpoCommand {
     await request.post(updateOptions);
   }
 
-
   private GetItemTypeForListName(name: string) {
     return "SP.Data." + name.charAt(0).toUpperCase() + name.split(" ").join("").slice(1) + "ListItem";
   }
@@ -193,98 +234,73 @@ class SpoFieldCopyCommand extends SpoCommand {
     });
     return uuid;
   }
-  private async createUpdateJSON(args: any, toFieldDef: any, record: any, fromFieldDef: any, formDigestValue: string): Promise<string> {
+  private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformer: IFieldTransformer, formDigestValue: string): Promise<string> {
     // format update js0n based on from / to field types
 
-    var update: any = {
-      __metadata: {
-        type: this.GetItemTypeForListName(args.options.listTitle)
-      }
+    var update: any = transformer.setJSON(record, fromFieldDef.InternalName);
+    update["__metadata"] = {
+      type: this.GetItemTypeForListName(args.options.listTitle)
+
     };
-    switch (fromFieldDef.TypeAsString + "|" + toFieldDef.TypeAsString) {
-      case "Text|User":
-
-        update[`${toFieldDef.InternalName}Id`] = await this.getNumericUserId(args, formDigestValue, record[fromFieldDef.InternalName]);
-        //    console.log(update);
-        break;
-      case "Text|Text":
-        update[`${toFieldDef.InternalName}`] = record[fromFieldDef.InternalName];
-        break;
-      case "Lookup|Text":
-        // note that by default we take whatever field the lookup column refers to. We could take any field from yje other list.
-        if (record[fromFieldDef.InternalName]) {
-          update[`${toFieldDef.InternalName}`] = record[`${fromFieldDef.InternalName}`][`${fromFieldDef.LookupField}`];
-        } else {
-          if (args.options.setMissingValuesToBlank === 'true') {
-            update[`${toFieldDef.InternalName}`] = "";
-          } else {
-          }
-
-        }
-        break;
-      default:
-        throw new Error(`No mapping defined to convert ${fromFieldDef.TypeAsString} to  ${toFieldDef.TypeAsString}. Have you considered contributing? `)
-    }
 
     const body = JSON.stringify(update);
-    //   console.log("body");
-    //  console.log(body);
+    console.log("body");
+    console.log(body);
     // return the OBJECT not the string!!!
-    return body;
+    return update;
   }
 
-  private async getNumericUserId(args: any, formDigestValue: string, userEmail: string): Promise<number | null> {
+  // private async getNumericUserId(args: any, formDigestValue: string, userEmail: string): Promise<number | null> {
 
-    var logonName = `i:0#.f|membership|${userEmail}`;
-    const ensureUserOption: any = {
-      url: `${args.options.webUrl}/_api/web/ensureuser`,
-      headers: {
-        'X-RequestDigest': formDigestValue,
-        'Content-Type': `application/json;odata=verbose`,
-        'Accept': `application/json`,
-      },
-      body: JSON.stringify({ 'logonName': logonName })
-    }
-    var id: number | null = null;
-    await request.post(ensureUserOption)
-      .then((userresult: any) => {
-        userresult = JSON.parse(userresult);
-        //     console.log(userresult.Id);
-        id = userresult.Id;
-      })
-      .catch((err) => {
-        console.log(`user ${userEmail} was not found`);
-        id = null;
-      });
+  //   var logonName = `i:0#.f|membership|${userEmail}`;
+  //   const ensureUserOption: any = {
+  //     url: `${args.options.webUrl}/_api/web/ensureuser`,
+  //     headers: {
+  //       'X-RequestDigest': formDigestValue,
+  //       'Content-Type': `application/json;odata=verbose`,
+  //       'Accept': `application/json`,
+  //     },
+  //     body: JSON.stringify({ 'logonName': logonName })
+  //   }
+  //   var id: number | null = null;
+  //   await request.post(ensureUserOption)
+  //     .then((userresult: any) => {
+  //       userresult = JSON.parse(userresult);
+  //       //     console.log(userresult.Id);
+  //       id = userresult.Id;
+  //     })
+  //     .catch((err) => {
+  //       console.log(`user ${userEmail} was not found`);
+  //       id = null;
+  //     });
 
-    //   console.log(`id is ${id}`)
-    return id;
+  //   //   console.log(`id is ${id}`)
+  //   return id;
 
-  };
-  private async getABatch(args: any, lastId: number, contextInfo: ContextInfo, fromFieldDef: any, toFieldDef: any) {
+  // };
+  private createFetchQuery(args: any, selects: Array<string>, expands: Array<string>): string {
     const listTitle = args.options.listTitle;
     const webUrl = args.options.webUrl;
     const batchSize = args.options.batchSize ? args.options.batchSize : 50;
     var requestUrl = "";
-    //  console.log("fromFieldDef in getabatch")
-    //  console.log(fromFieldDef);
-    //  console.log(fromFieldDef.TypeAsString);
-    //  console.log(fromFieldDef["TypeAsString"]);
 
-    switch (fromFieldDef.TypeAsString + "|" + toFieldDef.TypeAsString) {
-      case "Lookup|Text":
-        requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=Id,${fromFieldDef.InternalName}Id,${toFieldDef.InternalName},${fromFieldDef.InternalName}/${fromFieldDef.LookupField}&$expand=${fromFieldDef.InternalName}&$orderBy=Id&$filter=Id gt ${lastId}&$top=${batchSize}`;
-        break;
-      case "Text|Text":
-        requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=Id,${fromFieldDef.InternalName},${toFieldDef.InternalName}&$orderBy=Id&$filter=Id gt ${lastId}&$top=${batchSize}`;
-        break;
-      case "Text|User":
-        requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=Id,${fromFieldDef.InternalName},${toFieldDef.InternalName}Id,${toFieldDef.InternalName}/Title&$expand=${toFieldDef.InternalName}&$orderBy=Id&$filter=Id gt ${lastId}&$top=${batchSize}`;
-        break;
-      default:
-        throw new Error(`No mapping defined to convert ${fromFieldDef.TypeAsString} to  ${toFieldDef.TypeAsString}. Have you considered contributing? `)
+    var effectiveSelects: Array<string> = ["Id", ...selects];
+    requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=${effectiveSelects.join(',')}`;
+    if (expands && expands.length > 0) {
+      requestUrl += `&${expands.join(',')}`;
     }
-    //  console.log(`Fetching data using url ${requestUrl}`);
+    //{{{lastId}}} gets replaced for each batch
+    requestUrl += `&$orderBy=Id&$filter=Id gt {{{lastId}}}&$top=${batchSize}`;
+    console.log(`Requjest url is ${requestUrl}`);
+    return requestUrl;
+
+
+  }
+
+
+  private async getABatch(requestUrl: string, lastId: number, contextInfo: ContextInfo) {
+    var effectiveRequestUrl = requestUrl.replace(`{{{lastId}}}`, lastId.toString());
+    console.log(`Fetching data using url ${effectiveRequestUrl}`);
     const requestOptions: any = {
       url: requestUrl,
       headers: {
@@ -293,7 +309,6 @@ class SpoFieldCopyCommand extends SpoCommand {
       },
       json: true
     };
-    // console.log(requestOptions.url);
     let results: any = await request.get(requestOptions);
     return results;
   }
@@ -325,8 +340,13 @@ class SpoFieldCopyCommand extends SpoCommand {
 
       {
         option: '--setMissingValuesToBlank <setMissingValuesToBlank>',
-        description: 'If the source field is blank or empty, set the destination to blank.'
+        description: 'If the source field is blank or empty, set the destination to blank. Keep switch or make separate transformers'
+      },
+      {
+        option: '--transformer <transformer>',
+        description: 'The name of the field transformer to use (should we default this somehow, perhaps for like field types)'
       }
+
     ];
 
     const parentOptions: CommandOption[] = super.options();
@@ -355,7 +375,9 @@ class SpoFieldCopyCommand extends SpoCommand {
       if (!args.options.toField) {
         return 'Required parameter toField missing';
       }
-
+      if (!args.options.transformer) {
+        return 'Required parameter transformer missing';
+      }
       // // get the field defs
       // let contextInfo: ContextInfo = await this.getRequestDigest(args.options.webUrl);
       // const requestOptions: any = {
