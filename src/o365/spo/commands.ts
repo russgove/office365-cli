@@ -36,6 +36,7 @@ export default {
   FEATURE_ENABLE: `${prefix} feature enable`,
   FEATURE_LIST: `${prefix} feature list`,
   FIELD_ADD: `${prefix} field add`,
+  FIELD_COPY: `${prefix} field copy`,
   FIELD_GET: `${prefix} field get`,
   FIELD_REMOVE: `${prefix} field remove`,
   FIELD_SET: `${prefix} field set`,
