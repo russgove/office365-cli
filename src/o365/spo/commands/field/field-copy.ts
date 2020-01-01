@@ -238,7 +238,8 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformerDefinitiom: ITransformerDefinition, formDigestValue: string): Promise<string> {
     // format update json based on from / to field types
-    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef,toFieldDef,transformerDefinitiom,args.webUrl,formDigestValue);
+    console.log(`in create update webUrl is ${args.options.webUrl}` );
+    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef,toFieldDef,transformerDefinitiom,args.options.webUrl,formDigestValue);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
     };
@@ -326,7 +327,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       },
       {
         option: '-bs, --batchSize <batchSize>',
-        description: 'The number of rows to process at once'
+        description: 'The number of rows to process at once . Specifying batchsize of 0 bypasses batching logic and processes records one at a'
       },
       {
         option: '-l, --listTitle [listTitle]',

@@ -1,4 +1,6 @@
 import {textToTextFieldTransformer} from "./textToTextFieldTransformer";
+
+import {textToUserFieldTransformer} from "./textToUserFieldTransformer";
 export interface IFieldTransformer {
 
   /**
@@ -25,16 +27,18 @@ export interface IFieldDefinition {
   // add other attribute here as needed (like Prson Or group, DateOnly, etc,,)
 }
 export interface ITransformerDefinition{
-  fromFieldType:string,
-   toFieldType:string,
-   name:string,
-   transformer: IFieldTransformer,
-   description:string,
+  fromFieldType:string, // TypeAsString of the field we are copying From
+   toFieldType:string, // TypeAsString of the field we are copying  to
+   name:string, // the name of the transformer (anyting will do)
+   transformer: IFieldTransformer, // the implementatopm of the transformer
+   description:string, // a descriptopm of the transformation
    // add other swithches here and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches
 }
 
 var transfomers:Array<ITransformerDefinition>=[
      //// add other swithches her and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches (like replace nonEmpty values, system Update, etc)
-  {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"TextToText",description:"Text to Text-- can be used to change the internal name of a field"}
+  {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"TextToText",description:"Text to Text-- can be used to change the internal name of a field"},
+  {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"TextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)"}
+
 ]
 export default transfomers;
