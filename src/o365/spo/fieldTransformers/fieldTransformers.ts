@@ -1,5 +1,12 @@
-import {textToTextFieldTransformer} from "./textToTextFieldTransformer";
+/**
+ * To add a new transformer you need to
+ * 1. add a class to the field transformers foler that implements the IFieldTransformer interface
+ * 2. import that class here.
+ * 3. add a new element to the transfoRmers array at the bottom of this file
+ * 
+ */
 
+import {textToTextFieldTransformer} from "./textToTextFieldTransformer";
 import {textToUserFieldTransformer} from "./textToUserFieldTransformer";
 export interface IFieldTransformer {
 
