@@ -7,6 +7,7 @@ import SpoCommand from '../../../base/SpoCommand';
 import { ContextInfo } from '../../spo';
 import GlobalOptions from '../../../../GlobalOptions';
 import transformers,{IFieldDefinition,ITransformerDefinition} from '../../fieldTransformers/fieldTransformers';
+import transfomers from '../../fieldTransformers/fieldTransformers';
 
 
 //import { number } from 'easy-table';
@@ -61,17 +62,17 @@ class SpoFieldCopyCommand extends SpoCommand {
       }
     }
     if (!transformerDefinition) {
-      cmd.log(`No transformer named ${args.options.transformer} for convertiing from ${fromFieldDef.TypeAsString} to 
-       ${toFieldDef.TypeAsString} could be found. Valid transformers follow:`)
+      console.log(`${transfomers.length} transformers found`)
+      cmd.log(`No transformer named ${args.options.transformer} for converting from ${fromFieldDef.TypeAsString} to ${toFieldDef.TypeAsString} could be found. Valid transformers follow:`)
       for (let transformer of transformers) {
+        console.log(`transfiormer from type is  ${transformer.fromFieldType}, to type is ${transformer.toFieldType}`)
         if (transformer.fromFieldType === fromFieldDef.TypeAsString
           && transformer.toFieldType === toFieldDef.TypeAsString
         ) {
           cmd.log(`${transformer.name}  (${transformer.description})`);
-
         }
-        cb();
       }
+      cb();
     } else {
       let sande = transformerDefinition.transformer.setQuery(args.options.fromField,transformerDefinition);
       let selects = sande.selects;
