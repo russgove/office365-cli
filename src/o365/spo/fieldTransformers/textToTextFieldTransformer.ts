@@ -1,7 +1,7 @@
 import { IFieldTransformer,IFieldDefinition, ITransformerDefinition } from "./fieldTransformers";
 export  class textToTextFieldTransformer implements IFieldTransformer {
-  setQuery(fieldInternalName: string): { selects: Array<string>; expands: Array<string> } {
-    var selects: Array<string> = [fieldInternalName];
+  setQuery(fromFieldDef: IFieldDefinition): { selects: Array<string>; expands: Array<string> } {
+    var selects: Array<string> = [fromFieldDef.InternalName];
     var expands: Array<string> = [];
     return { selects: selects, expands: expands }
   }

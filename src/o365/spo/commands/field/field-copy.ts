@@ -74,7 +74,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       }
       cb();
     } else {
-      let sande = transformerDefinition.transformer.setQuery(args.options.fromField, transformerDefinition);
+      let sande = transformerDefinition.transformer.setQuery(fromFieldDef, transformerDefinition);
       let selects = sande.selects;
       let expands = sande.expands;
       let fetchQuery: string = this.createFetchQuery(args, selects, expands);

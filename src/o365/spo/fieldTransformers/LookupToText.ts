@@ -1,9 +1,9 @@
 import request from '../../../request';
 import { IFieldTransformer,IFieldDefinition, ITransformerDefinition } from "./fieldTransformers";
 export  class lookupToTextTransformer implements IFieldTransformer {
-  setQuery(fromInternalName: string,transformerDefinition:ITransformerDefinition): { selects: Array<string>; expands: Array<string> } {
-    var selects: Array<string> = [fromInternalName+'Id'];
-    var expands: Array<string> = [fromInternalName];
+  setQuery(fromFieldDef:IFieldDefinition,transformerDefinition:ITransformerDefinition): { selects: Array<string>; expands: Array<string> } {
+    var selects: Array<string> = [fromFieldDef.InternalName+'Id'];
+    var expands: Array<string> = [fromFieldDef.InternalName];
     return { selects: selects, expands: expands }
   }
   async setJSON(listitem: any,fromFieldDef:IFieldDefinition,toFieldDef:IFieldDefinition,transformerDefinition:ITransformerDefinition,webUrl: string,formDigestValue:string): Promise< any >{

@@ -1,8 +1,8 @@
 import request from '../../../request';
 import { IFieldTransformer,IFieldDefinition, ITransformerDefinition } from "./fieldTransformers";
 export  class textToUserFieldTransformer implements IFieldTransformer {
-  setQuery(fromInternalName: string,transformerDefinition:ITransformerDefinition): { selects: Array<string>; expands: Array<string> } {
-    var selects: Array<string> = [fromInternalName];
+  setQuery(fromFieldDef: IFieldDefinition,transformerDefinition:ITransformerDefinition): { selects: Array<string>; expands: Array<string> } {
+    var selects: Array<string> = [fromFieldDef.InternalName];
     var expands: Array<string> = [];
     return { selects: selects, expands: expands }
   }

@@ -9,7 +9,7 @@ export interface IFieldTransformer {
    * @returns  an array of fields to be added to the selects clause of the request and an array of expands to be 
    * to the $expands clause of the request
    */
-  setQuery(fieldInternalName: string,transformerDefinition:ITransformerDefinition): { selects: Array<string>; expands: Array<string> };
+  setQuery(fromFieldDef: IFieldDefinition,transformerDefinition:ITransformerDefinition): { selects: Array<string>; expands: Array<string> };
 
   /**
      * @param listitem : The listitem selected from the sharepoint list that will include the fields requested in the 
