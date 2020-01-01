@@ -9,6 +9,6 @@ export interface ITransformerDefinition{
 }
 
 var transfomers:Array<ITransformerDefinition>=[
-  {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"text to tyext:",description:"Text to Text"}
+  {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"TextToText",description:"Text to Text-- can be used to change the internal name of a field"}
 ]
 export default transfomers;

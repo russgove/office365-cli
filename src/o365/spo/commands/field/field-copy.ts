@@ -54,7 +54,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     if (!toFieldDef) { throw new Error("error fetching to field definition."); }
     
     let transformerToUse: IFieldTransformer | null = null;
-    for (var transformer of transformers) {
+    for (let transformer of transformers) {
       if (transformer.fromFieldType === fromFieldDef.TypeAsString
         && transformer.toFieldType === toFieldDef.TypeAsString
         && transformer.name === args.options.transformer) {
@@ -65,7 +65,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     if (!transformerToUse) {
       cmd.log(`No transformer named ${args.options.transformer} for convertiing from ${fromFieldDef.TypeAsString} to 
        ${toFieldDef.TypeAsString} could be found. Valid transformers follow:`)
-      for (var transformer of transformers) {
+      for (let transformer of transformers) {
         if (transformer.fromFieldType === fromFieldDef.TypeAsString
           && transformer.toFieldType === toFieldDef.TypeAsString
         ) {
@@ -75,10 +75,10 @@ class SpoFieldCopyCommand extends SpoCommand {
         cb();
       }
     } else {
-      var sande = transformerToUse.setQuery(args.options.fromField);
-      var selects = sande.selects;
-      var expands = sande.expands;
-      var fetchQuery: string = this.createFetchQuery(args, selects, expands);
+      let sande = transformerToUse.setQuery(args.options.fromField);
+      let selects = sande.selects;
+      let expands = sande.expands;
+      let fetchQuery: string = this.createFetchQuery(args, selects, expands);
       let lastId: number = 0;
       while (true) {
         let results = await this.getABatch(fetchQuery, lastId, contextInfo)
@@ -148,7 +148,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     //const fromField = args.options.fromField;
 
     const webUrl = args.options.webUrl;
-    for (var record of records) {
+    for (let record of records) {
       const body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
       //   console.log(body);
       const updateOptions: any = {
@@ -178,14 +178,14 @@ class SpoFieldCopyCommand extends SpoCommand {
     // const fromField = args.options.fromField;
     const webUrl = args.options.webUrl;
     // see  https://social.technet.microsoft.com/wiki/contents/articles/30044.sharepoint-online-performing-batch-operations-using-rest-api.aspx
-    var batchGuid = this.generateUUID();
-    var batchContents = new Array();
-    var changeSetId = this.generateUUID();
+    let batchGuid = this.generateUUID();
+    let batchContents = new Array();
+    let changeSetId = this.generateUUID();
     batchContents.push('Content-Type: application/http');
     batchContents.push('Accept: application/json;odata=verbose');
-    for (var record of records) {
+    for (let record of records) {
       const body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
-      var endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
+      let endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
       batchContents.push('--changeset_' + changeSetId);
       batchContents.push('Content-Type: application/http');
       batchContents.push('Content-Transfer-Encoding: binary');
@@ -201,7 +201,7 @@ class SpoFieldCopyCommand extends SpoCommand {
 
 
 
-    var batchBody = batchContents.join('\u000d\u000a');
+    let batchBody = batchContents.join('\u000d\u000a');
     batchContents = new Array();
     batchContents.push('--batch_' + batchGuid);
     batchContents.push('Content-Type: multipart/mixed; boundary="changeset_' + changeSetId + '"');
@@ -226,9 +226,9 @@ class SpoFieldCopyCommand extends SpoCommand {
     return "SP.Data." + name.charAt(0).toUpperCase() + name.split(" ").join("").slice(1) + "ListItem";
   }
   private generateUUID() {
-    var d = new Date().getTime();
-    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      var r = (d + Math.random() * 16) % 16 | 0;
+    let d = new Date().getTime();
+    let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      let r = (d + Math.random() * 16) % 16 | 0;
       d = Math.floor(d / 16);
       return (c == 'x' ? r : (r & 0x7 | 0x8)).toString(16);
     });
@@ -237,7 +237,7 @@ class SpoFieldCopyCommand extends SpoCommand {
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformer: IFieldTransformer, formDigestValue: string): Promise<string> {
     // format update js0n based on from / to field types
 
-    var update: any = transformer.setJSON(record, fromFieldDef.InternalName);
+    let update: any = transformer.setJSON(record, fromFieldDef.InternalName);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
 
@@ -252,7 +252,7 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   // private async getNumericUserId(args: any, formDigestValue: string, userEmail: string): Promise<number | null> {
 
-  //   var logonName = `i:0#.f|membership|${userEmail}`;
+  //   let logonName = `i:0#.f|membership|${userEmail}`;
   //   const ensureUserOption: any = {
   //     url: `${args.options.webUrl}/_api/web/ensureuser`,
   //     headers: {
@@ -262,7 +262,7 @@ class SpoFieldCopyCommand extends SpoCommand {
   //     },
   //     body: JSON.stringify({ 'logonName': logonName })
   //   }
-  //   var id: number | null = null;
+  //   let id: number | null = null;
   //   await request.post(ensureUserOption)
   //     .then((userresult: any) => {
   //       userresult = JSON.parse(userresult);
@@ -282,9 +282,9 @@ class SpoFieldCopyCommand extends SpoCommand {
     const listTitle = args.options.listTitle;
     const webUrl = args.options.webUrl;
     const batchSize = args.options.batchSize ? args.options.batchSize : 50;
-    var requestUrl = "";
+    let requestUrl = "";
 
-    var effectiveSelects: Array<string> = ["Id", ...selects];
+    let effectiveSelects: Array<string> = ["Id", ...selects];
     requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=${effectiveSelects.join(',')}`;
     if (expands && expands.length > 0) {
       requestUrl += `&${expands.join(',')}`;
@@ -299,10 +299,10 @@ class SpoFieldCopyCommand extends SpoCommand {
 
 
   private async getABatch(requestUrl: string, lastId: number, contextInfo: ContextInfo) {
-    var effectiveRequestUrl = requestUrl.replace(`{{{lastId}}}`, lastId.toString());
+    let effectiveRequestUrl = requestUrl.replace(`{{{lastId}}}`, lastId.toString());
     console.log(`Fetching data using url ${effectiveRequestUrl}`);
     const requestOptions: any = {
-      url: requestUrl,
+      url: effectiveRequestUrl,
       headers: {
         'X-RequestDigest': contextInfo.FormDigestValue,
         accept: 'application/json;odata=nometadata'

@@ -158,7 +158,7 @@ describe(commands.FIELD_COPY, () => {
   it('Works wit text  to text  mapping', (done) => {
     let fetchedToFieldDef = false;
     let fetchedFromFieldDef = false;
-    var fetchedRecords = false;
+    let fetchedRecords = false;
     sinon.stub(request, 'get').callsFake((opts) => {
 
 
