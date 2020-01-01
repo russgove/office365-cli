@@ -24,6 +24,9 @@ export interface IFieldTransformer {
 export interface IFieldDefinition {
   InternalName: string;
   TypeAsString: string;
+  LookupField: string;
+  LookupList: string;
+  LookupWebId: string;
   // add other attribute here as needed (like Prson Or group, DateOnly, etc,,)
 }
 export interface ITransformerDefinition{

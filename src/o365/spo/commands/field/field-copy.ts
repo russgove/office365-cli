@@ -6,7 +6,7 @@ import {
 import SpoCommand from '../../../base/SpoCommand';
 import { ContextInfo } from '../../spo';
 import GlobalOptions from '../../../../GlobalOptions';
-import transformers,{IFieldDefinition,ITransformerDefinition} from '../../fieldTransformers/fieldTransformers';
+import transformers, { IFieldDefinition, ITransformerDefinition } from '../../fieldTransformers/fieldTransformers';
 import transfomers from '../../fieldTransformers/fieldTransformers';
 
 
@@ -51,13 +51,13 @@ class SpoFieldCopyCommand extends SpoCommand {
     if (!fromFieldDef) { throw new Error("error fetching from field definition."); }
     let toFieldDef: IFieldDefinition = await this.fetchFieldDefinition(args.options.webUrl, args.options.listTitle, args.options.toField, contextInfo, cmd, cb);
     if (!toFieldDef) { throw new Error("error fetching to field definition."); }
-    
+
     let transformerDefinition: ITransformerDefinition | null = null;
     for (let transformer of transformers) {
       if (transformer.fromFieldType === fromFieldDef.TypeAsString
         && transformer.toFieldType === toFieldDef.TypeAsString
         && transformer.name === args.options.transformer) {
-          transformerDefinition = transformer;
+        transformerDefinition = transformer;
         break;
       }
     }
@@ -74,7 +74,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       }
       cb();
     } else {
-      let sande = transformerDefinition.transformer.setQuery(args.options.fromField,transformerDefinition);
+      let sande = transformerDefinition.transformer.setQuery(args.options.fromField, transformerDefinition);
       let selects = sande.selects;
       let expands = sande.expands;
       let fetchQuery: string = this.createFetchQuery(args, selects, expands);
@@ -122,8 +122,8 @@ class SpoFieldCopyCommand extends SpoCommand {
       },
       json: true
     };
-    return request.get<{value:Array<IFieldDefinition>}>(fieldDefinitionRequest)
-      .then((results: {value:Array<IFieldDefinition>}) => {
+    return request.get<{ value: Array<IFieldDefinition> }>(fieldDefinitionRequest)
+      .then((results: { value: Array<IFieldDefinition> }) => {
         console.log(results);
         if (results.value.length !== 0) {
           console.log(`${fieldInternalName} was found`);
@@ -147,8 +147,8 @@ class SpoFieldCopyCommand extends SpoCommand {
 
     const webUrl = args.options.webUrl;
     for (let record of records) {
-      let  body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
-      let postBody=JSON.stringify(body);
+      let body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
+      let postBody = JSON.stringify(body);
 
       //   console.log(body);
       const updateOptions: any = {
@@ -185,7 +185,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     batchContents.push('Accept: application/json;odata=verbose');
     for (let record of records) {
       const reqbody = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
-      let postBody=JSON.stringify(reqbody);
+      let postBody = JSON.stringify(reqbody);
       let endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
       batchContents.push('--changeset_' + changeSetId);
       batchContents.push('Content-Type: application/http');
@@ -239,8 +239,8 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformerDefinitiom: ITransformerDefinition, formDigestValue: string): Promise<string> {
     // format update json based on from / to field types
-    console.log(`in create update webUrl is ${args.options.webUrl}` );
-    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef,toFieldDef,transformerDefinitiom,args.options.webUrl,formDigestValue);
+    console.log(`in create update webUrl is ${args.options.webUrl}`);
+    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
     };
@@ -297,7 +297,7 @@ class SpoFieldCopyCommand extends SpoCommand {
   }
 
 
-  private async getABatch(requestUrl: string, lastId: number, contextInfo: ContextInfo):Promise<any> {
+  private async getABatch(requestUrl: string, lastId: number, contextInfo: ContextInfo): Promise<any> {
     const effectiveRequestUrl = requestUrl.replace(`{{{lastId}}}`, lastId.toString());
     console.log(`Fetching data using url ${effectiveRequestUrl}`);
     const requestOptions: any = {
