@@ -17,7 +17,7 @@ export interface IFieldTransformer {
    * 
    * @returns an object that can be used to update the target field type
    */
-   setJSON(listitem: any, fromFieldDef: IFieldDefinition,toFieldDefinition:IFieldDefinition,transformationDefinition:ITransformerDefinition): Promise<any>;
+   setJSON(listitem: any, fromFieldDef: IFieldDefinition,toFieldDefinition:IFieldDefinition,transformationDefinition:ITransformerDefinition,webUrl:string,formDigestValue:string): Promise<any>;
 }
 export interface IFieldDefinition {
   InternalName: string;

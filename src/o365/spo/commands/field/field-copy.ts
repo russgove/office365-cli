@@ -183,7 +183,8 @@ class SpoFieldCopyCommand extends SpoCommand {
     batchContents.push('Content-Type: application/http');
     batchContents.push('Accept: application/json;odata=verbose');
     for (let record of records) {
-      const body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
+      const reqbody = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
+      let postBody=JSON.stringify(reqbody);
       let endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
       batchContents.push('--changeset_' + changeSetId);
       batchContents.push('Content-Type: application/http');
@@ -193,7 +194,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       batchContents.push('Content-Type: application/json;odata=verbose');
       batchContents.push('IF-MATCH:*');
       batchContents.push('');
-      batchContents.push(`${body}`);
+      batchContents.push(`${postBody}`);
       batchContents.push('');
     }
     batchContents.push('--changeset_' + changeSetId + '--');
@@ -237,7 +238,7 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformerDefinitiom: ITransformerDefinition, formDigestValue: string): Promise<string> {
     // format update json based on from / to field types
-    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef,toFieldDef,transformerDefinitiom);
+    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef,toFieldDef,transformerDefinitiom,args.webUrl,formDigestValue);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
     };
