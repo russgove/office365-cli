@@ -8,6 +8,7 @@
 
 import {textToTextFieldTransformer} from "./textToTextFieldTransformer";
 import {textToUserFieldTransformer} from "./textToUserFieldTransformer";
+import {lookupToTextTransformer} from "./LookupToTextFieldTransformer";
 export interface IFieldTransformer {
 
   /**
@@ -48,7 +49,8 @@ export interface ITransformerDefinition{
 var transfomers:Array<ITransformerDefinition>=[
      //// add other swithches her and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches (like replace nonEmpty values, system Update, etc)
   {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"TextToText",description:"Text to Text-- can be used to change the internal name of a field"},
-  {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"TextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)"}
+  {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"TextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)"},
+  {fromFieldType:"Lookup", toFieldType:"Text",transformer:new lookupToTextTransformer(),name:"LookupToTextDefault",description:"Can be used to copy the default lookup Value of a lookup column to a text field"}
 
 ]
 export default transfomers;

@@ -285,12 +285,18 @@ class SpoFieldCopyCommand extends SpoCommand {
 
     let effectiveSelects: Array<string> = ["Id", ...selects];
     requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=${effectiveSelects.join(',')}`;
+    console.log(`expands.length is ${expands.length}`)
     if (expands && expands.length > 0) {
-      requestUrl += `&${expands.join(',')}`;
+      const x=expands.join(',');
+      console.log(`x is ${x}`)
+      console.log(`request was ${requestUrl}`)
+      requestUrl += `&$expand=${x}`;
+      console.log(`request is now ${requestUrl}`)
+      
     }
     //{{{lastId}}} gets replaced for each batch
     requestUrl += `&$orderBy=Id&$filter=Id gt {{{lastId}}}&$top=${batchSize}`;
-    console.log(`Requjest url is ${requestUrl}`);
+    console.log(`Requjest url format is ${requestUrl}`);
     return requestUrl;
 
 
