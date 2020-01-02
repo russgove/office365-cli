@@ -7,13 +7,12 @@ export  class textToUserFieldTransformer implements IFieldTransformer {
     return { selects: selects, expands: expands }
   }
   async setJSON(listitem: any,fromFieldDef:IFieldDefinition,toFieldDef:IFieldDefinition,transformerDefinition:ITransformerDefinition,webUrl: string,formDigestValue:string): Promise< any >{
-    console.log(`in setJson  webUrl is ${webUrl}` );
+  
     let update:any={};
     update[`${toFieldDef.InternalName}Id`] = await this.getNumericUserId(webUrl,formDigestValue, listitem[fromFieldDef.InternalName]);
     return update;
   }
   private async getNumericUserId(webUrl:string, formDigestValue: string, userEmail: string): Promise<number | null> {
-   console.log(`Fetching user with email ${userEmail}   formDigestValue is ${formDigestValue} webUrl is ${webUrl}` );
     var logonName = `i:0#.f|membership|${userEmail}`;
     const ensureUserOption: any = {
       url: `${webUrl}/_api/web/ensureuser`,
@@ -28,15 +27,12 @@ export  class textToUserFieldTransformer implements IFieldTransformer {
     await request.post(ensureUserOption)
       .then((userresult: any) => {
         userresult = JSON.parse(userresult);
-        //     console.log(userresult.Id);
         id = userresult.Id;
       })
       .catch((err) => {
         console.log(`user ${userEmail} was not found`);
         id = null;
       });
-
-    //   console.log(`id is ${id}`)
     return id;
 
   };

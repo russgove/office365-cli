@@ -7,19 +7,11 @@ import SpoCommand from '../../../base/SpoCommand';
 import { ContextInfo } from '../../spo';
 import GlobalOptions from '../../../../GlobalOptions';
 import transformers, { IFieldDefinition, ITransformerDefinition } from '../../fieldTransformers/fieldTransformers';
-import transfomers from '../../fieldTransformers/fieldTransformers';
-
-
-//import { number } from 'easy-table';
-//import { ExceptionData } from 'applicationinsights/out/Declarations/Contracts';
-
-
 const vorpal: Vorpal = require('../../../../vorpal-init');
 
 interface CommandArgs {
   options: Options;
 }
-
 
 interface Options extends GlobalOptions {
   webUrl: string;
@@ -28,6 +20,8 @@ interface Options extends GlobalOptions {
   toField: string;
   transformer: string;
   batchSize?: number;
+  whatIf?: boolean;
+  filter?: string;
   //fromList (copy based on lookup field)
   //filter (filter which items should be copied)
 }
@@ -62,10 +56,9 @@ class SpoFieldCopyCommand extends SpoCommand {
       }
     }
     if (!transformerDefinition) {
-      console.log(`${transfomers.length} transformers found`)
+
       cmd.log(`No transformer named ${args.options.transformer} for converting from ${fromFieldDef.TypeAsString} to ${toFieldDef.TypeAsString} could be found. Valid transformers follow:`)
       for (let transformer of transformers) {
-        console.log(`transfiormer from type is  ${transformer.fromFieldType}, to type is ${transformer.toFieldType}`)
         if (transformer.fromFieldType === fromFieldDef.TypeAsString
           && transformer.toFieldType === toFieldDef.TypeAsString
         ) {
@@ -86,7 +79,6 @@ class SpoFieldCopyCommand extends SpoCommand {
             this.handleRejectedODataJsonPromise(err, cmd, cb);
 
           });
-        console.log(`@line 90 results.value is ${results.value}`)
         if (results.value.length === 0) break;
         if (args.options.batchSize && args.options.batchSize > 0) {
           await this.updateBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
@@ -124,9 +116,8 @@ class SpoFieldCopyCommand extends SpoCommand {
     };
     return request.get<{ value: Array<IFieldDefinition> }>(fieldDefinitionRequest)
       .then((results: { value: Array<IFieldDefinition> }) => {
-        console.log(results);
+
         if (results.value.length !== 0) {
-          console.log(`${fieldInternalName} was found`);
           return results.value[0];
         }
         else {
@@ -149,8 +140,6 @@ class SpoFieldCopyCommand extends SpoCommand {
     for (let record of records) {
       let body = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
       let postBody = JSON.stringify(body);
-
-      //   console.log(body);
       const updateOptions: any = {
         url: `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`,
         headers: {
@@ -166,7 +155,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       }
 
       await request.post(updateOptions).catch((e) => {
-        console.log(e);
+        throw (e)
       })
 
     }
@@ -239,13 +228,10 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformerDefinitiom: ITransformerDefinition, formDigestValue: string): Promise<string> {
     // format update json based on from / to field types
-    console.log(`in create update webUrl is ${args.options.webUrl}`);
     let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
     };
-    console.log("UPDATE");
-    console.log(JSON.stringify(update));
     return update;
   }
 
@@ -285,18 +271,19 @@ class SpoFieldCopyCommand extends SpoCommand {
 
     let effectiveSelects: Array<string> = ["Id", ...selects];
     requestUrl = `${webUrl}/_api/web/lists/getByTitle('${listTitle}')/items?$select=${effectiveSelects.join(',')}`;
-    console.log(`expands.length is ${expands.length}`)
     if (expands && expands.length > 0) {
-      const x=expands.join(',');
-      console.log(`x is ${x}`)
-      console.log(`request was ${requestUrl}`)
+      const x = expands.join(',');
       requestUrl += `&$expand=${x}`;
-      console.log(`request is now ${requestUrl}`)
-      
     }
     //{{{lastId}}} gets replaced for each batch
-    requestUrl += `&$orderBy=Id&$filter=Id gt {{{lastId}}}&$top=${batchSize}`;
-    console.log(`Requjest url format is ${requestUrl}`);
+    
+    if (args.options.filter){
+      requestUrl += `&$filter=${args.options.filter} and Id gt {{{lastId}}}`;
+    }else{
+      requestUrl += `&$filter=Id gt {{{lastId}}}`;
+    }
+
+    requestUrl += `&$orderBy=Id&$top=${batchSize}`;
     return requestUrl;
 
 
@@ -305,7 +292,6 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async getABatch(requestUrl: string, lastId: number, contextInfo: ContextInfo): Promise<any> {
     const effectiveRequestUrl = requestUrl.replace(`{{{lastId}}}`, lastId.toString());
-    console.log(`Fetching data using url ${effectiveRequestUrl}`);
     const requestOptions: any = {
       url: effectiveRequestUrl,
       headers: {
@@ -348,7 +334,18 @@ class SpoFieldCopyCommand extends SpoCommand {
       {
         option: '--transformer <transformer>',
         description: 'The name of the field transformer to use (should we default this somehow, perhaps for like field types)'
+      },
+      {
+        option: '-w --whatif <whatif>',
+        description: 'If the whatif flag is set to try, the command will display the updates that would be made, but not actually make any updates'
+      },
+      {
+        option: '--filter <filter>',
+        description: 'An odata filter to be added to the request to select the listitems to update'
       }
+
+
+
 
     ];
 
