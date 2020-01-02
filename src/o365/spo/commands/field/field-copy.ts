@@ -22,6 +22,10 @@ interface Options extends GlobalOptions {
   batchSize?: number;
   whatIf?: boolean;
   filter?: string;
+  otherListName?:string;
+  otherListJoinFieldName?:string;
+  otherListTargetFieldName?:string;
+  
   //fromList (copy based on lookup field)
   //filter (filter which items should be copied)
 }
@@ -228,7 +232,7 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformerDefinitiom: ITransformerDefinition, formDigestValue: string): Promise<string> {
     // format update json based on from / to field types
-    let update: any = await transformerDefinitiom.transformer.setJSON(record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
+    let update: any = await transformerDefinitiom.transformer.setJSON(args,record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
     };
@@ -343,7 +347,22 @@ class SpoFieldCopyCommand extends SpoCommand {
         option: '--filter <filter>',
         description: 'An odata filter to be added to the request to select the listitems to update'
       }
-
+      ,
+      {
+        option: '--otherListName <otherListName>',
+        description: 'When using the TextToTextFromOtherList transformer, this parameter specifies the Title of the other list'
+      },
+      {
+        option: '--otherListJoinFieldName <otherListJoinFieldName>',
+        description: 'When using the TextToTextFromOtherList transformer, this parameter specifies the InternalName of the field in the other list to be used to join to the fromfield in the list being updated'
+      },
+      {
+        option: '--otherListTargetFieldName <otherListTargetFieldName>',
+        description: 'When using the TextToTextFromOtherList transformer, this parameter specifies the InternalName of the field in the other list whose value will be placed in the toField in the list being updated'
+      }
+      
+      
+      
 
 
 

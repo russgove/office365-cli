@@ -8,6 +8,7 @@
 
 import {textToTextFieldTransformer} from "./textToTextFieldTransformer";
 import {textToUserFieldTransformer} from "./textToUserFieldTransformer";
+import {textToTextInOtherListFieldTransformer} from "./textToTextInOtherListFieldTransformer";
 import {lookupToTextTransformer} from "./LookupToTextFieldTransformer";
 
 export interface IFieldTransformer {
@@ -28,7 +29,7 @@ export interface IFieldTransformer {
    * 
    * @returns an object that can be used to update the target field type
    */
-   setJSON(listitem: any, fromFieldDef: IFieldDefinition,toFieldDefinition:IFieldDefinition,transformationDefinition:ITransformerDefinition,webUrl:string,formDigestValue:string): Promise<any>;
+   setJSON(args:any,listitem: any, fromFieldDef: IFieldDefinition,toFieldDefinition:IFieldDefinition,transformationDefinition:ITransformerDefinition,webUrl:string,formDigestValue:string): Promise<any>;
 }
 export interface IFieldDefinition {
   InternalName: string;
@@ -51,7 +52,9 @@ export interface ITransformerDefinition{
 var transfomers:Array<ITransformerDefinition>=[
    //// add other swithches her and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches (like replace nonEmpty values, system Update, etc) (or maybe use a closure)
   {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"TextToText",description:"Text to Text-- can be used to change the internal name of a field"},
+  {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextInOtherListFieldTransformer(),name:"TextToTextFromOtherList",description:"Takes a field value in the current listm, looks it up in an other list, and sets text field in the current list using some field in the other list(i.e. This copies a text field from the other list to the current list base on the join field!).",searchDisplayName:false},
   {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"EmailTextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)",searchDisplayName:false},
+ 
   {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"DisplayNameTextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)",searchDisplayName:true},
   {fromFieldType:"Lookup", toFieldType:"Text",transformer:new lookupToTextTransformer(),name:"LookupToTextDefault",description:"Can be used to copy the default lookup Value of a lookup column to a text field"}
 

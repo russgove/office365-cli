@@ -5,7 +5,7 @@ export  class textToTextFieldTransformer implements IFieldTransformer {
     var expands: Array<string> = [];
     return { selects: selects, expands: expands }
   }
- async setJSON(listitem: any,fromFieldDef:IFieldDefinition,toFieldDef:IFieldDefinition,transformerDefinition:ITransformerDefinition,webUrl:string,formDigestValue:string): Promise<any> {
+ async setJSON(args:any,listitem: any,fromFieldDef:IFieldDefinition,toFieldDef:IFieldDefinition,transformerDefinition:ITransformerDefinition,webUrl:string,formDigestValue:string): Promise<any> {
     let update:any={};
     update[`${toFieldDef.InternalName}`]=listitem[fromFieldDef.InternalName]
     return update;
