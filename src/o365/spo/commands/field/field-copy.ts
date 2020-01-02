@@ -278,7 +278,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     // TODO: what about and/or
     //{{{lastId}}} gets replaced for each batch
         if (args.options.filter){
-      requestUrl += `&$filter=${args.options.filter} and Id gt {{{lastId}}}`;
+      requestUrl += `&$filter=(${args.options.filter}) and Id gt {{{lastId}}}`;
     }else{
       requestUrl += `&$filter=Id gt {{{lastId}}}`;
     }

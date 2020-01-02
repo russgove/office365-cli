@@ -9,6 +9,7 @@
 import {textToTextFieldTransformer} from "./textToTextFieldTransformer";
 import {textToUserFieldTransformer} from "./textToUserFieldTransformer";
 import {lookupToTextTransformer} from "./LookupToTextFieldTransformer";
+
 export interface IFieldTransformer {
 
   /**
@@ -43,13 +44,15 @@ export interface ITransformerDefinition{
    name:string, // the name of the transformer (anyting will do)
    transformer: IFieldTransformer, // the implementatopm of the transformer
    description:string, // a descriptopm of the transformation
+   searchDisplayName?:boolean;// used in text to User, Search using display namme? If no, then use email
    // add other swithches here and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches
 }
 
 var transfomers:Array<ITransformerDefinition>=[
-     //// add other swithches her and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches (like replace nonEmpty values, system Update, etc)
+   //// add other swithches her and pass to the transformer. Thatway a single transformer can be reuesed by passing different switches (like replace nonEmpty values, system Update, etc) (or maybe use a closure)
   {fromFieldType:"Text", toFieldType:"Text",transformer:new textToTextFieldTransformer(),name:"TextToText",description:"Text to Text-- can be used to change the internal name of a field"},
-  {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"TextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)"},
+  {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"EmailTextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)",searchDisplayName:false},
+  {fromFieldType:"Text", toFieldType:"User",transformer:new textToUserFieldTransformer(),name:"DisplayNameTextToUser",description:"Can be used to convert a column containing a persons email to a User Column. (Single user only)",searchDisplayName:true},
   {fromFieldType:"Lookup", toFieldType:"Text",transformer:new lookupToTextTransformer(),name:"LookupToTextDefault",description:"Can be used to copy the default lookup Value of a lookup column to a text field"}
 
 ]
