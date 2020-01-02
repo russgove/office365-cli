@@ -22,10 +22,10 @@ interface Options extends GlobalOptions {
   batchSize?: number;
   whatIf?: boolean;
   filter?: string;
-  otherListName?:string;
-  otherListJoinFieldName?:string;
-  otherListTargetFieldName?:string;
-  
+  otherListName?: string;
+  otherListJoinFieldName?: string;
+  otherListTargetFieldName?: string;
+
   //fromList (copy based on lookup field)
   //filter (filter which items should be copied)
 }
@@ -232,7 +232,7 @@ class SpoFieldCopyCommand extends SpoCommand {
 
   private async createUpdateJSON(args: any, fromFieldDef: IFieldDefinition, toFieldDef: IFieldDefinition, record: any, transformerDefinitiom: ITransformerDefinition, formDigestValue: string): Promise<string> {
     // format update json based on from / to field types
-    let update: any = await transformerDefinitiom.transformer.setJSON(args,record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
+    let update: any = await transformerDefinitiom.transformer.setJSON(args, record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
     update["__metadata"] = {
       type: this.GetItemTypeForListName(args.options.listTitle)
     };
@@ -281,9 +281,9 @@ class SpoFieldCopyCommand extends SpoCommand {
     }
     // TODO: what about and/or
     //{{{lastId}}} gets replaced for each batch
-        if (args.options.filter){
+    if (args.options.filter) {
       requestUrl += `&$filter=(${args.options.filter}) and Id gt {{{lastId}}}`;
-    }else{
+    } else {
       requestUrl += `&$filter=Id gt {{{lastId}}}`;
     }
 
@@ -360,9 +360,9 @@ class SpoFieldCopyCommand extends SpoCommand {
         option: '--otherListTargetFieldName <otherListTargetFieldName>',
         description: 'When using the TextToTextFromOtherList transformer, this parameter specifies the InternalName of the field in the other list whose value will be placed in the toField in the list being updated'
       }
-      
-      
-      
+
+
+
 
 
 
@@ -397,32 +397,18 @@ class SpoFieldCopyCommand extends SpoCommand {
       if (!args.options.transformer) {
         return 'Required parameter transformer missing';
       }
-      // // get the field defs
-      // let contextInfo: ContextInfo = await this.getRequestDigest(args.options.webUrl);
-      // const requestOptions: any = {
-      //   url: `${args.options.webUrl}/_api/web/lists/getByTitle('${args.options.listTitle}')/fields?$filter=InternalName in ('${args.options.fromField}','${args.options.toField}')}`,
-      //   headers: {
-      //     'X-RequestDigest': contextInfo.FormDigestValue,
-      //     accept: 'application/json;odata=nometadata'
-      //   },
-      //   json: true
-      // };
-      // let results: any = await request.get(requestOptions);
-      // return results;
-
-
-      // if (args.options.options) {
-      //   let optionsError: string | boolean = true;
-      //   const options: string[] = ['SetMissingValuesToBlank'];
-      //   args.options.options.split(',').forEach(o => {
-      //     o = o.trim();
-      //     if (options.indexOf(o) < 0) {
-      //       optionsError = `${o} is not a valid value for the options argument. Allowed values are SetMissingValuesToBlank`;
-      //     }
-      //   });
-      //   return optionsError;
-      // }
-
+      console.log(`otherlistname us ${args.options.otherListName}`)
+      if (args.options.transformer === `TextToTextFromOtherList`) {
+        if (!args.options.otherListName) {
+          return `Parameter otherListName, which is required for transformer 'TextToTextFromOtherList' is  missing. This parameter must be set to the title of the other list that you want to copy a field from into the field called '${args.options.toField}' in the list '${args.options.listTitle}'`;
+        }
+        if (!args.options.otherListJoinFieldName) {
+          return `Parameter otherListJoinFieldName, which is required for transformer 'TextToTextFromOtherList' is  missing. This field must be set to the IntenalName of the field in list '${args.options.otherListName}' that you want to use to join '${args.options.otherListName}'  to field '${args.options.fromField}' in list '${args.options.listTitle}' `;
+        }
+        if (!args.options.otherListTargetFieldName) {
+          return `Parameter otherListTargetFieldName, which is required for transformer 'TextToTextFromOtherList' is  missing. This field must be set to the IntenalName of the field in ${args.options.listTitle}  that you want to be replace with the value of ${args.options.otherListTargetFieldName} in ${args.options.otherListName} when ${args.options.otherListJoinFieldName} in ${args.options.otherListName} equals ${args.options.fromField} in  ${args.options.listTitle}`;
+        }
+      }
       return true;
     };
   }
