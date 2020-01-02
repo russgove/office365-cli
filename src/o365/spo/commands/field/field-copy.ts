@@ -275,9 +275,9 @@ class SpoFieldCopyCommand extends SpoCommand {
       const x = expands.join(',');
       requestUrl += `&$expand=${x}`;
     }
+    // TODO: what about and/or
     //{{{lastId}}} gets replaced for each batch
-    
-    if (args.options.filter){
+        if (args.options.filter){
       requestUrl += `&$filter=${args.options.filter} and Id gt {{{lastId}}}`;
     }else{
       requestUrl += `&$filter=Id gt {{{lastId}}}`;
