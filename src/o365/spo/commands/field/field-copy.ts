@@ -21,6 +21,8 @@ interface Options extends GlobalOptions {
   transformer: string;
   batchSize?: number;
   whatIf?: boolean;
+  useEtag?: boolean; // should default to true. Not using now.
+  
   filter?: string;
   otherListName?: string;
   otherListJoinFieldName?: string;
