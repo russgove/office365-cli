@@ -26,8 +26,8 @@ interface Options extends GlobalOptions {
   otherListJoinFieldName?: string;
   otherListTargetFieldName?: string;
 
-  //fromList (copy based on lookup field)
-  //filter (filter which items should be copied)
+  //fromValue (used instead of a fromField to copy the same value to all rows that pass the filter)
+  
 }
 
 class SpoFieldCopyCommand extends SpoCommand {
