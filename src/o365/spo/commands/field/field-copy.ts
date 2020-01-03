@@ -26,7 +26,7 @@ interface Options extends GlobalOptions {
   otherListJoinFieldName?: string;
   otherListTargetFieldName?: string;
 
-  //fromValue (used instead of a fromField to copy the same value to all rows that pass the filter)
+  //fromValue (used instead of fromfield. copy same value to all rows that pass filter. could replace all John.doe@xyz.com to another user!)
   
 }
 
