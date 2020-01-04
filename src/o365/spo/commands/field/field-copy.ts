@@ -87,6 +87,8 @@ class SpoFieldCopyCommand extends SpoCommand {
           });
         if (results.value.length === 0) break;
         if (args.options.batchSize && args.options.batchSize > 0) {
+
+          // note that etah is in results. need to pass results so we can get the eTag
           await this.updateBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
             .catch((err) => {
               cmd.log(vorpal.chalk.green('Error updating bacth'));
@@ -94,6 +96,8 @@ class SpoFieldCopyCommand extends SpoCommand {
 
             });
         } else {
+          // note that etag is in results. need to pass results so we can get the eTag
+          
           await this.updateNoBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
             .catch((err) => {
               cmd.log(vorpal.chalk.red('Error updating item'));
@@ -154,7 +158,7 @@ class SpoFieldCopyCommand extends SpoCommand {
           'Accept': `application/json;odata=verbose`,
           'Content-Length': postBody.length,
           'X-HTTP-Method': 'MERGE',
-          'IF-MATCH': '*'
+          'IF-MATCH': '*' // if args.options.useEtag, set to etag of record.
 
         },
         body: postBody
@@ -179,6 +183,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     batchContents.push('Content-Type: application/http');
     batchContents.push('Accept: application/json;odata=verbose');
     for (let record of records) {
+      console.log(record);
       const reqbody = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
       let postBody = JSON.stringify(reqbody);
       let endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
@@ -188,14 +193,12 @@ class SpoFieldCopyCommand extends SpoCommand {
       batchContents.push('');
       batchContents.push('PATCH ' + endpoint + ' HTTP/1.1');
       batchContents.push('Content-Type: application/json;odata=verbose');
-      batchContents.push('IF-MATCH:*');
+      batchContents.push('IF-MATCH:*');// if args.options.useEtag set yp etag from record
       batchContents.push('');
       batchContents.push(`${postBody}`);
       batchContents.push('');
     }
     batchContents.push('--changeset_' + changeSetId + '--');
-
-
 
     let batchBody = batchContents.join('\u000d\u000a');
     batchContents = new Array();
