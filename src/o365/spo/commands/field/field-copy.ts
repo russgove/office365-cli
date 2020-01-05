@@ -21,15 +21,15 @@ interface Options extends GlobalOptions {
   transformer: string;
   batchSize?: number;
   whatIf?: boolean;
-  useEtag?: boolean; // should default to true. Not using now.
-  
+  ignoreEtag?: boolean;
+
   filter?: string;
   otherListName?: string;
   otherListJoinFieldName?: string;
   otherListTargetFieldName?: string;
 
   //fromValue (used instead of fromfield. copy same value to all rows that pass filter. could replace all John.doe@xyz.com to another user!)
-  
+
 }
 
 class SpoFieldCopyCommand extends SpoCommand {
@@ -87,8 +87,6 @@ class SpoFieldCopyCommand extends SpoCommand {
           });
         if (results.value.length === 0) break;
         if (args.options.batchSize && args.options.batchSize > 0) {
-
-          // note that etah is in results. need to pass results so we can get the eTag
           await this.updateBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
             .catch((err) => {
               cmd.log(vorpal.chalk.green('Error updating bacth'));
@@ -96,8 +94,6 @@ class SpoFieldCopyCommand extends SpoCommand {
 
             });
         } else {
-          // note that etag is in results. need to pass results so we can get the eTag
-          
           await this.updateNoBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
             .catch((err) => {
               cmd.log(vorpal.chalk.red('Error updating item'));
@@ -158,12 +154,12 @@ class SpoFieldCopyCommand extends SpoCommand {
           'Accept': `application/json;odata=verbose`,
           'Content-Length': postBody.length,
           'X-HTTP-Method': 'MERGE',
-          'IF-MATCH': '*' // if args.options.useEtag, set to etag of record.
+          'IF-MATCH': args.options.ignoreEtag ? '*' : record["odata.etag"] // if args.options.useEtag, set to etag of record.
 
         },
         body: postBody
       }
-
+      console.log(JSON.stringify(updateOptions))
       await request.post(updateOptions).catch((e) => {
         throw (e)
       })
@@ -183,7 +179,7 @@ class SpoFieldCopyCommand extends SpoCommand {
     batchContents.push('Content-Type: application/http');
     batchContents.push('Accept: application/json;odata=verbose');
     for (let record of records) {
-      console.log(record);
+      console.log(`etag is ${record["odata.etag"]}`);
       const reqbody = await this.createUpdateJSON(args, fromFieldDef, toFieldDef, record, transformer, formDigestValue);
       let postBody = JSON.stringify(reqbody);
       let endpoint = `${webUrl}/_api/web/lists/getbytitle('${listTitle}')/items(${record.Id})`;
@@ -193,7 +189,10 @@ class SpoFieldCopyCommand extends SpoCommand {
       batchContents.push('');
       batchContents.push('PATCH ' + endpoint + ' HTTP/1.1');
       batchContents.push('Content-Type: application/json;odata=verbose');
-      batchContents.push('IF-MATCH:*');// if args.options.useEtag set yp etag from record
+      console.log(args.options.useEtag);
+
+      batchContents.push(`IF-MATCH:${args.options.ignoreEtag ? '*' : record["odata.etag"]}`);// if args.options.useEtag set yp etag from record
+      
       batchContents.push('');
       batchContents.push(`${postBody}`);
       batchContents.push('');
@@ -303,16 +302,17 @@ class SpoFieldCopyCommand extends SpoCommand {
     const effectiveRequestUrl = requestUrl.replace(`{{{lastId}}}`, lastId.toString());
     const requestOptions: any = {
       url: effectiveRequestUrl,
+      //nometadata/verbose/minimalmetatata :https://www.microsoft.com/en-us/microsoft-365/blog/2014/08/13/json-light-support-rest-sharepoint-api-released/
       headers: {
         'X-RequestDigest': contextInfo.FormDigestValue,
-        accept: 'application/json;odata=nometadata'
+        accept: 'application/json;odata=minimalmetadata'
       },
       json: true
     };
     let results: any = await request.get(requestOptions);
+    console.log(results);
     return results;
   }
-
   public options(): CommandOption[] {
     const options: CommandOption[] = [
       {
@@ -364,13 +364,11 @@ class SpoFieldCopyCommand extends SpoCommand {
       {
         option: '--otherListTargetFieldName <otherListTargetFieldName>',
         description: 'When using the TextToTextFromOtherList transformer, this parameter specifies the InternalName of the field in the other list whose value will be placed in the toField in the list being updated'
+      },
+      {
+        option: '--ignoreEtag <ignoreEtag>',
+        description: 'Do not send Etags in the IfMatch header'
       }
-
-
-
-
-
-
     ];
 
     const parentOptions: CommandOption[] = super.options();
@@ -402,7 +400,6 @@ class SpoFieldCopyCommand extends SpoCommand {
       if (!args.options.transformer) {
         return 'Required parameter transformer missing';
       }
-      console.log(`otherlistname us ${args.options.otherListName}`)
       if (args.options.transformer === `TextToTextFromOtherList`) {
         if (!args.options.otherListName) {
           return `Parameter otherListName, which is required for transformer 'TextToTextFromOtherList' is  missing. This parameter must be set to the title of the other list that you want to copy a field from into the field called '${args.options.toField}' in the list '${args.options.listTitle}'`;
