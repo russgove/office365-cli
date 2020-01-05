@@ -90,11 +90,12 @@ class SpoFieldCopyCommand extends SpoCommand {
             this.handleRejectedODataJsonPromise(err, cmd, cb);
 
           });
+        if (results.value.length === 0) break;
         console.log("Pausing so I can go update an item to change the etag")
         // need to sleep for a minute here so i can update the item change etag.
-        await this.delay(60000);
+        await this.delay(15000);
         console.log("DONE Pausing to update etag")
-        if (results.value.length === 0) break;
+
         if (args.options.batchSize && args.options.batchSize > 0) {
           await this.updateBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
             .catch((err) => {
@@ -170,6 +171,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       }
       console.log(JSON.stringify(updateOptions))
       await request.post(updateOptions).catch((e) => {
+        console.log(e);// Etag does not match?
         throw (e)
       })
 
@@ -200,6 +202,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       batchContents.push('Content-Type: application/json;odata=verbose');
       console.log(args.options.useEtag);
 
+      //batchContents.push(`Accept: application/json;odata=verbose`);
       batchContents.push(`IF-MATCH:${args.options.ignoreEtag ? '*' : record["odata.etag"]}`);// if args.options.useEtag set yp etag from record
 
       batchContents.push('');
@@ -222,16 +225,22 @@ class SpoFieldCopyCommand extends SpoCommand {
       url: `${webUrl}/_api/$batch`,
       headers: {
         'X-RequestDigest': formDigestValue,
-        'Content-Type': `multipart/mixed; boundary="batch_${batchGuid}"`
+        'Content-Type': `multipart/mixed; boundary="batch_${batchGuid}"`,
+        'Accept': 'application/json;odata=verbose'
       },
       body: batchContents.join('\r\n')
     }
-    await request.post(updateOptions);
+    const res = await request.post(updateOptions).catch((e) => {
+      console.log(`error ${e}`);// Etag does not match?
+      throw (e)
+    })
+    console.log(`result ${typeof res} follows:`);// Etag does not match?
+    console.log(res);
   }
 
-  private GetItemTypeForListName(name: string) {
-    return "SP.Data." + name.charAt(0).toUpperCase() + name.split(" ").join("").slice(1) + "ListItem";
-  }
+  // private GetItemTypeForListName(name: string) {
+  //   return "SP.Data." + name.charAt(0).toUpperCase() + name.split(" ").join("").slice(1) + "ListItem";
+  // }
   private generateUUID() {
     let d = new Date().getTime();
     let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -247,7 +256,8 @@ class SpoFieldCopyCommand extends SpoCommand {
     // format update json based on from / to field types
     let update: any = await transformerDefinitiom.transformer.setJSON(args, record, fromFieldDef, toFieldDef, transformerDefinitiom, args.options.webUrl, formDigestValue);
     update["__metadata"] = {
-      type: this.GetItemTypeForListName(args.options.listTitle)
+      //type: this.GetItemTypeForListName(args.options.listTitle)
+      type: record['odata.type']
     };
     return update;
   }
