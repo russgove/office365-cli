@@ -33,6 +33,11 @@ interface Options extends GlobalOptions {
 }
 
 class SpoFieldCopyCommand extends SpoCommand {
+  // method user to test etag, Can delay for a minute while i update record
+  public delay(ms: number): Promise<any> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   public get name(): string {
     return `${commands.FIELD_COPY}`;
   }
@@ -85,6 +90,10 @@ class SpoFieldCopyCommand extends SpoCommand {
             this.handleRejectedODataJsonPromise(err, cmd, cb);
 
           });
+        console.log("Pausing so I can go update an item to change the etag")
+        // need to sleep for a minute here so i can update the item change etag.
+        await this.delay(60000);
+        console.log("DONE Pausing to update etag")
         if (results.value.length === 0) break;
         if (args.options.batchSize && args.options.batchSize > 0) {
           await this.updateBatch(args, contextInfo.FormDigestValue, results.value, transformerDefinition, fromFieldDef, toFieldDef)
@@ -192,7 +201,7 @@ class SpoFieldCopyCommand extends SpoCommand {
       console.log(args.options.useEtag);
 
       batchContents.push(`IF-MATCH:${args.options.ignoreEtag ? '*' : record["odata.etag"]}`);// if args.options.useEtag set yp etag from record
-      
+
       batchContents.push('');
       batchContents.push(`${postBody}`);
       batchContents.push('');
